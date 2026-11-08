@@ -18,6 +18,7 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
+#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/stat.h>
 #include <psp2kern/fios2.h>
@@ -25,23 +26,6 @@
 
 #define HookImport(module_name, library_nid, func_nid, func_name) taiHookFunctionImportForKernel(KERNEL_PID, &func_name ## _ref, module_name, library_nid, func_nid, func_name ## _patch)
 #define HookOffset(modid, seg_index, thumb, offset, func_name) taiHookFunctionOffsetForKernel(KERNEL_PID, &func_name ## _ref, modid, seg_index, offset, thumb, func_name ## _patch);
-
-typedef struct SceSelfAuthInfo { // size is 0x90
-   SceUInt64 program_authority_id;
-   uint8_t padding1[8];
-   uint8_t capability[0x20];
-   uint8_t attribute[0x20];
-   uint8_t padding2[0x10];
-   uint8_t klicensee[0x10];
-   uint32_t unk_70;
-   uint32_t unk_74;
-   uint32_t unk_78;
-   uint32_t unk_7C;
-   uint32_t unk_80; // ex: 0x10
-   uint32_t unk_84;
-   uint32_t unk_88;
-   uint32_t unk_8C;
-} SceSelfAuthInfo;
 
 #define RE_SAVEDATA_DIR "data/resavedata"
 
@@ -126,7 +110,7 @@ static void write_blank_file(const char *path, SceSize size, const char *magic, 
 	if(dir_exists(path))
 		return;
 
-	memid = ksceKernelAllocMemBlock("ReSavedata", SCE_KERNEL_MEMBLOCK_TYPE_RW_UNK0, alloc_size, NULL);
+	memid = ksceKernelAllocMemBlock("ReSavedata", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, alloc_size, NULL);
 	if(memid < 0)
 		return;
 
