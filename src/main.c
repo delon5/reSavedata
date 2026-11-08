@@ -59,15 +59,11 @@ static const char *rs_path(void){
 	return rs_base;
 }
 
-/* system processes keep the system's savedata handling */
+/* system processes (the shell, "main", and the NPXS… applications) keep
+ * the system's savedata handling */
 static int is_system_title(SceUID pid, const char *titleid){
-	SceSelfAuthInfo auth_info;
-
-	if(strcmp(titleid, "main") == 0 || strncmp(titleid, "NPXS", 4) == 0)
-		return 1;
-	memset(&auth_info, 0, sizeof(auth_info));
-	ksceSysrootGetSelfAuthInfo(pid, &auth_info);
-	return auth_info.program_authority_id == 0x2808000000000000;
+	(void)pid;
+	return strcmp(titleid, "main") == 0 || strncmp(titleid, "NPXS", 4) == 0;
 }
 
 /* the title's folder and its sce_sys, created on first use */
