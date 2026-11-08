@@ -9,10 +9,11 @@ back it up and roll it back without ever writing to another drive.
 
 Every game's `savedata0:` is redirected to a plain folder (no PFS encryption):
 
-- `uma0:data/resavedata/<TITLEID>/` when a storage plugin (StorageMgr, YAMT,
+- `uma0:resavedata/<TITLEID>/` when a storage plugin (StorageMgr, YAMT,
   gamesd, usbmc) put an SD2Vita, PSVSD or USB stick on ux0 and the Memory Card
   on uma0;
-- `ux0:data/resavedata/<TITLEID>/` otherwise (the Memory Card is ux0).
+- `ux0:resavedata/<TITLEID>/` otherwise (the Memory Card is ux0), as in the
+  original.
 
 The folder is created the first time the game starts; nothing has to be made
 by hand. The drive is decided when the first game starts after boot (when the
@@ -27,11 +28,10 @@ redirected, and the folder is on the Memory Card.
 
 Saves are not moved automatically. A game whose saves are still in the
 system's folder starts from empty until they are copied to
-`<drive>:data/resavedata/<TITLEID>/`. Copy them out of
+`<drive>:resavedata/<TITLEID>/`. Copy them out of
 `ux0:user/00/savedata/<TITLEID>/` with VitaShell (which decrypts them on the
-way out); saves made with the 2022 reSavedata in `ux0:data/resavedata` are
-already in the right layout and only need moving to the card's drive if the
-card is not ux0.
+way out). Saves already in `ux0:resavedata` only need moving to
+`uma0:resavedata` on a console where the card is uma0.
 
 ## Installation
 

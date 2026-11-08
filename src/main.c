@@ -5,12 +5,11 @@
  * Changes (C) 2026, delon5 (https://github.com/delon5/reSavedata):
  *  - every game is redirected, its folder created on first start
  *    (the original redirected only titles whose folder the user had made);
- *  - the folder lives on the official Memory Card: uma0:data/resavedata
- *    when a storage plugin put another drive (SD2Vita, PSVSD, USB stick)
- *    on ux0 and the card on uma0, else ux0:data/resavedata. The drive is
+ *  - the folder lives on the official Memory Card: uma0:resavedata when a
+ *    storage plugin put another drive (SD2Vita, PSVSD, USB stick) on ux0
+ *    and the card on uma0, else ux0:resavedata as before. The drive is
  *    decided when the first game starts, when the mounts are settled, and
- *    kept until reboot. The layout is the one the 2022 reSavedata uses,
- *    so saves made with it keep working on a console where the card is ux0.
+ *    kept until reboot.
  *
  * Licensed under the GPL-3.0, see LICENSE.
  */
@@ -27,9 +26,9 @@
 #define HookImport(module_name, library_nid, func_nid, func_name) taiHookFunctionImportForKernel(KERNEL_PID, &func_name ## _ref, module_name, library_nid, func_nid, func_name ## _patch)
 #define HookOffset(modid, seg_index, thumb, offset, func_name) taiHookFunctionOffsetForKernel(KERNEL_PID, &func_name ## _ref, modid, seg_index, offset, thumb, func_name ## _patch);
 
-#define RE_SAVEDATA_DIR "data/resavedata"
+#define RE_SAVEDATA_DIR "resavedata"
 
-/* "uma0:data/resavedata" or "ux0:data/resavedata", empty until decided */
+/* "uma0:resavedata" or "ux0:resavedata", empty until decided */
 static char rs_base[0x40];
 
 static int dir_exists(const char *path){
@@ -46,15 +45,10 @@ static void ensure_dir(const char *path){
  * (StorageMgr, YAMT, gamesd, usbmc) the card is uma0 and another drive is
  * ux0; without one the card is ux0 and there is no uma0. */
 static const char *rs_path(void){
-	char path[0x40];
-
 	if(rs_base[0] != '\0')
 		return rs_base;
 
 	snprintf(rs_base, sizeof(rs_base), "%s%s", dir_exists("uma0:") ? "uma0:" : "ux0:", RE_SAVEDATA_DIR);
-
-	snprintf(path, sizeof(path), "%.5sdata", rs_base);
-	ensure_dir(path);
 	ensure_dir(rs_base);
 	return rs_base;
 }
