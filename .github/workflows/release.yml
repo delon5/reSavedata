@@ -1,0 +1,88 @@
+# Release: a pushed tag v<version>, or a manual run given the version (the
+# tag is then created by the release itself, on the commit the run was
+# started from) -> build, a zip with the plugin, README and LICENSE, and a
+# draft GitHub Release with generated notes to edit before publishing.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 1.1.0 or 1.1.0-rc1 (tag v<version> is created)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VITASDK: ${{ github.workspace }}/vitasdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          case "$VERSION" in
+            [0-9]*) ;;
+            *) echo "version must start with a digit: $VERSION"; exit 1 ;;
+          esac
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=v$VERSION" >> "$GITHUB_ENV"
+
+      - name: Cached VitaSDK
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VITASDK }}
+          key: vitasdk-${{ runner.os }}-seed-0.1.6-channel-2026.08-taihen
+
+      - name: Install VitaSDK (official vdpm bootstrap) and taiHEN
+        env:
+          VDPM_NONINTERACTIVE: "1"
+        run: |
+          if [ ! -x "$VITASDK/bin/arm-vita-eabi-gcc" ]; then
+            rm -rf "$VITASDK"
+            git clone --depth 1 https://github.com/vitasdk/vdpm
+            for attempt in 1 2 3 4 5; do
+              ./vdpm/bootstrap-vitasdk.sh && break
+              echo "bootstrap attempt $attempt failed"
+              rm -rf "$VITASDK"
+              [ "$attempt" = 5 ] && exit 1
+              sleep 60
+            done
+          fi
+          export PATH="$VITASDK/bin:$PATH"
+          echo "$VITASDK/bin" >> "$GITHUB_PATH"
+          if [ ! -f "$VITASDK/arm-vita-eabi/lib/libtaihenForKernel_stub.a" ]; then
+            "$VITASDK/bin/vdpm" install taihen || "$VITASDK/bin/vdpm" taihen
+          fi
+          ls "$VITASDK/arm-vita-eabi/include/taihen.h"
+
+      - name: Build
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          make -j"$(nproc)"
+
+      - name: Package
+        run: |
+          mkdir -p "resavedata-$VERSION"
+          cp build/resavedata.skprx README.md LICENSE "resavedata-$VERSION/"
+          (cd "resavedata-$VERSION" && sha256sum resavedata.skprx > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          zip -r "resavedata-$VERSION.zip" "resavedata-$VERSION"
+
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" "resavedata-$VERSION.zip" --target "$GITHUB_SHA" \
+            --draft --generate-notes --title "reSavedata (Memory Card edition) $VERSION"
